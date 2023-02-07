@@ -8,14 +8,16 @@ from io import BytesIO
 # Load your model to GPU as a global variable here using the variable name "model"
 def init():
     global model
-    
-    model = whisper.load_model("base")
+    global use_gpu
+    use_gpu = torch.cuda.is_available()
+    device = "cuda" if use_gpu else "cpu"
+    model = whisper.load_model("base", device=device)
 
 # Inference is ran for every server call
 # Reference your preloaded global model variable here.
 def inference(model_inputs:dict) -> dict:
     global model
-
+    global use_gpu
     # Parse out your arguments
     mp3BytesString = model_inputs.get('mp3BytesString', None)
     if mp3BytesString == None:
@@ -26,8 +28,7 @@ def inference(model_inputs:dict) -> dict:
         file.write(mp3Bytes.getbuffer())
     
     # Run the model
-    result = model.transcribe("input.mp3")
-    output = {"text":result["text"]}
+    result = model.transcribe("input.mp3", language="en", fp16=use_gpu)
     os.remove("input.mp3")
     # Return the results as a dictionary
-    return output
+    return result
